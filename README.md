@@ -30,13 +30,21 @@
 ## 📁 Project Structure
 
 ```bash
-src/
-├── controller/      # REST Controllers
-├── service/         # Business Logic
-├── repository/      # Data Access Layer
-├── model/           # Entity Classes
-├── dto/             # Data Transfer Objects (optional)
-└── config/          # Configuration
+src/main/java/com/loanapp/
+├── config/        # Configuration classes
+├── controller/    # REST Controllers
+├── dto/           # Data Transfer Objects
+├── entity/        # Entity classes
+├── enums/         # Enum definitions
+├── repository/    # Data Access Layer
+├── security/      # Security configurations
+├── service/       # Business Logic
+└── util/          # Utility classes
+```
+
+```bash
+src/main/resources/
+├── application.properties
 ```
 
 ---
