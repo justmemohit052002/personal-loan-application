@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired private AuthenticationManager authManager;
@@ -28,7 +28,6 @@ public class AuthController {
         try {
             User savedUser = userService.registerUser(user);
 
-            // 🔐 Safe response (no password exposure)
             Map<String, Object> response = new HashMap<>();
             response.put("message", "User registered successfully");
             response.put("email", savedUser.getEmail());
