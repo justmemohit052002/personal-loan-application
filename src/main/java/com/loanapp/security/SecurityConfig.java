@@ -37,8 +37,8 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .anyRequest().authenticated()
+                .requestMatchers("/auth/login", "/auth/register").permitAll() // 🔥 only these are public
+                .anyRequest().authenticated() // 🔒 everything else protected
             )
 
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -46,12 +46,13 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 🔥 THIS FIXES YOUR ERROR
+    // Required for authentication
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    // Password encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

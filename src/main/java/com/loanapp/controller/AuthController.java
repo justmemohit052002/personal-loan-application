@@ -21,25 +21,27 @@ public class AuthController {
     @Autowired private JwtUtil jwtUtil;
     @Autowired private UserService userService;
 
-    // ✅ REGISTER (now handled by service)
+    // ✅ REGISTER
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
 
         try {
             User savedUser = userService.registerUser(user);
 
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(savedUser);
+            // 🔐 Safe response (no password exposure)
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "User registered successfully");
+            response.put("email", savedUser.getEmail());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (RuntimeException e) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
-    // ✅ LOGIN (unchanged logic)
+    // ✅ LOGIN
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
@@ -53,15 +55,15 @@ public class AuthController {
 
             String token = jwtUtil.generateToken(request.getEmail());
 
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Login successful");
             response.put("token", token);
 
             return ResponseEntity.ok(response);
 
         } catch (BadCredentialsException e) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid email or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid email or password"));
         }
     }
 }

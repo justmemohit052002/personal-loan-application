@@ -1,10 +1,8 @@
 package com.loanapp.service;
 
-
 import com.loanapp.entity.User;
 import com.loanapp.enums.Role;
 import com.loanapp.repository.UserRepository;
-import com.loanapp.service.UserService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,44 +20,48 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private PasswordEncoder encoder;
 
-    // ✅ REGISTER USER (AUTH CORE LOGIC)
+    // ✅ REGISTER USER
     @Override
     public User registerUser(User user) {
 
+        // 🔤 Normalize email
+        String email = user.getEmail().toLowerCase().trim();
+        user.setEmail(email);
+
         // 🔍 VALIDATION
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            throw new RuntimeException("Email is required");
+        if (email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
         }
 
         if (user.getPassword() == null || user.getPassword().isBlank()) {
-            throw new RuntimeException("Password is required");
+            throw new IllegalArgumentException("Password is required");
         }
 
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Email already exists");
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already exists");
         }
 
         if (user.getMobileNumber() != null &&
             userRepository.existsByMobileNumber(user.getMobileNumber())) {
-            throw new RuntimeException("Mobile number already exists");
+            throw new IllegalArgumentException("Mobile number already exists");
         }
 
-        // 🔐 PASSWORD ENCODING
+        // PASSWORD ENCODING
         user.setPassword(encoder.encode(user.getPassword()));
 
-        // 🎭 ROLE ASSIGNMENT
-        if (user.getRole() == null) {
-            user.setRole(Role.USER); // default role
-        }
+        //  FORCE ROLE (prevent frontend hacking)
+        user.setRole(Role.USER);
 
-        // 🧾 SAVE USER
+        // DEFAULT FLAG
+        user.setIsDeleted(false);
+
         return userRepository.save(user);
     }
 
-    // ✅ GET BY EMAIL (used for future logic)
+    // ✅ GET BY EMAIL
     @Override
     public Optional<User> getUserByEmail(String email) {
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(email.toLowerCase().trim());
     }
 
     // ✅ UPDATE USER
@@ -76,7 +78,7 @@ public class UserServiceImpl implements UserService {
         existingUser.setState(updatedUser.getState());
         existingUser.setPincode(updatedUser.getPincode());
 
-        // 🔐 update password only if provided
+        // update password only if provided
         if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
             existingUser.setPassword(encoder.encode(updatedUser.getPassword()));
         }
@@ -91,13 +93,10 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // ✅ GET ALL
+    // ✅ GET ALL (only active users)
     @Override
     public List<User> getAllUsers() {
-        return userRepository.findAll()
-                .stream()
-                .filter(u -> !Boolean.TRUE.equals(u.getIsDeleted()))
-                .toList();
+        return userRepository.findByIsDeletedFalse(); // better than filtering in memory
     }
 
     // ✅ DELETE (SOFT DELETE)
