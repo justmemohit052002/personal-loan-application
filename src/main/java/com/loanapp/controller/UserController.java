@@ -1,9 +1,13 @@
 package com.loanapp.controller;
 
+import com.loanapp.dto.UpdateUserRequest;
 import com.loanapp.dto.UserResponse;
 import com.loanapp.entity.User;
+import com.loanapp.mapper.UserMapper;
 import com.loanapp.security.CustomUserDetails;
 import com.loanapp.service.UserService;
+
+import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -33,40 +37,24 @@ public class UserController {
 
         User user = userDetails.getUser();
 
-        return ResponseEntity.ok(new UserResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getMobileNumber(),
-                user.getRole(),
-                user.getCity(),
-                user.getState()
-        ));
+        return ResponseEntity.ok(UserMapper.toResponse(user));
     }
 
-    // ✅ GET user by ID (Admin only)
+    // ✅ GET user by ID (ADMIN + LOAN_OFFICER)
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
 
         User user = userService.getUserById(id);
 
-        return ResponseEntity.ok(new UserResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getMobileNumber(),
-                user.getRole(),
-                user.getCity(),
-                user.getState()
-        ));
+        return ResponseEntity.ok(UserMapper.toResponse(user));
     }
 
-    // ✅ UPDATE profile
+    // ✅ UPDATE profile (SAFE)
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody User updatedUser) {
+            @Valid @RequestBody UpdateUserRequest request) {
 
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -74,7 +62,7 @@ public class UserController {
         }
 
         Long id = userDetails.getUser().getId();
-        User updated = userService.updateUser(id, updatedUser);
+        User updated = userService.updateUser(id, request);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Profile updated successfully",
@@ -83,27 +71,20 @@ public class UserController {
         ));
     }
 
-    // 🔥 GET ALL USERS (Admin only, SAFE DATA)
+    // 🔥 GET ALL USERS (ADMIN + LOAN_OFFICER)
     @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     public ResponseEntity<?> getAllUsers() {
 
-        List<UserResponse> users = userService.getAllUsers().stream()
-                .map(u -> new UserResponse(
-                        u.getId(),
-                        u.getFullName(),
-                        u.getEmail(),
-                        u.getMobileNumber(),
-                        u.getRole(),
-                        u.getCity(),
-                        u.getState()
-                ))
+        List<UserResponse> users = userService.getAllUsers()
+                .stream()
+                .map(UserMapper::toResponse)
                 .toList();
 
         return ResponseEntity.ok(users);
     }
 
-    // ✅ DELETE USER (Admin only)
+    // ✅ DELETE USER (ADMIN only)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
