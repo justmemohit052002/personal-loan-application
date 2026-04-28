@@ -10,25 +10,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
+	@Autowired
+	private UserRepository userRepository;
 
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+	@Override
+	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
 
-        // Convert email to lowercase and remove extra spaces
-        String normalizedEmail = email.toLowerCase().trim();
+		String normalizedEmail = email.toLowerCase().trim();
 
-        // Find user by email
-        User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("Invalid email or password"));
+		User user = userRepository.findByEmailAndIsDeletedFalse(normalizedEmail)
+				.orElseThrow(() -> new UsernameNotFoundException("Invalid email or password"));
 
-        // If user is soft deleted, block login
-        if (Boolean.TRUE.equals(user.getIsDeleted())) {
-            throw new UsernameNotFoundException("Invalid email or password");
-        }
-
-        // Return user details for Spring Security
-        return new CustomUserDetails(user);
-    }
+		return new CustomUserDetails(user);
+	}
 }
