@@ -39,10 +39,19 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // ✅ FIXED
-                .anyRequest().authenticated()
-            )
 
+            	    // Public endpoints
+            	    .requestMatchers("/api/auth/**").permitAll()
+
+            	    // USER + ADMIN can upload
+            	    .requestMatchers("/api/documents/upload").hasAnyRole("USER")
+
+            	    // 🔥 ADMIN ONLY endpoints
+            	    .requestMatchers("/api/documents/admin/**").hasRole("LOAN_OFFICER")
+
+            	    // Everything else must be authenticated
+            	    .anyRequest().authenticated()
+            	)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -57,4 +66,5 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+    
 }
