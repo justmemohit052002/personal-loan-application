@@ -41,7 +41,8 @@ public class UserController {
     }
 
     // ✅ GET user by ID (ADMIN + LOAN_OFFICER)
-    @GetMapping("/{id}")
+    // 🔥 FIXED: only numeric IDs allowed
+    @GetMapping("/{id:\\d+}")
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
 
@@ -85,7 +86,8 @@ public class UserController {
     }
 
     // ✅ DELETE USER (ADMIN only)
-    @DeleteMapping("/{id}")
+    // 🔥 FIXED: only numeric IDs allowed
+    @DeleteMapping("/{id:\\d+}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
 
