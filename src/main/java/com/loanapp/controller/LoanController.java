@@ -23,7 +23,10 @@ public class LoanController {
     @Autowired
     private LoanService loanService;
 
-    // ✅ APPLY LOAN
+    // ============================
+    // ✅ USER APIs
+    // ============================
+
     @PostMapping("/apply")
     public ResponseEntity<?> applyLoan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -43,7 +46,6 @@ public class LoanController {
         );
     }
 
-    // ✅ GET MY LOANS
     @GetMapping("/my")
     public ResponseEntity<?> getMyLoans(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -63,8 +65,32 @@ public class LoanController {
         return ResponseEntity.ok(loans);
     }
 
-    // 🔐 GET LOAN BY ID (SECURE)
-    @GetMapping("/{id}")
+    // ============================
+    // 🥉 ADMIN API (PUT BEFORE /{id})
+    // ============================
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllLoans() {
+
+        List<LoanResponse> loans = loanService.getAllLoans()
+                .stream()
+                .map(l -> new LoanResponse(
+                        l.getId(),
+                        l.getAmount(),
+                        l.getTenure(),
+                        l.getStatus()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(loans);
+    }
+
+    // ============================
+    // 🔐 GET BY ID (FIXED)
+    // ============================
+
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<?> getLoan(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -84,10 +110,9 @@ public class LoanController {
     }
 
     // ============================
-    // 🥈 TASK 2: LOAN OFFICER APIs
+    // 🥈 LOAN OFFICER APIs
     // ============================
 
-    // 🔥 GET PENDING LOANS
     @GetMapping("/pending")
     @PreAuthorize("hasRole('LOAN_OFFICER')")
     public ResponseEntity<?> getPendingLoans() {
@@ -105,7 +130,6 @@ public class LoanController {
         return ResponseEntity.ok(loans);
     }
 
-    // 🔥 APPROVE LOAN
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasRole('LOAN_OFFICER')")
     public ResponseEntity<?> approveLoan(@PathVariable Long id) {
@@ -122,12 +146,33 @@ public class LoanController {
         );
     }
 
-    // 🔥 REJECT LOAN
     @PutMapping("/{id}/reject")
     @PreAuthorize("hasRole('LOAN_OFFICER')")
     public ResponseEntity<?> rejectLoan(@PathVariable Long id) {
 
         Loan loan = loanService.rejectLoan(id);
+
+        return ResponseEntity.ok(
+                new LoanResponse(
+                        loan.getId(),
+                        loan.getAmount(),
+                        loan.getTenure(),
+                        loan.getStatus()
+                )
+        );
+    }
+
+    // ============================
+    // 🥉 ADMIN OVERRIDE
+    // ============================
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateLoanStatus(
+            @PathVariable Long id,
+            @RequestParam String status) {
+
+        Loan loan = loanService.updateLoanStatus(id, status);
 
         return ResponseEntity.ok(
                 new LoanResponse(

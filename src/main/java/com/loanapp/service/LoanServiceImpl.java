@@ -16,13 +16,16 @@ import java.util.List;
 @Service
 public class LoanServiceImpl implements LoanService {
 
-    @Autowired 
+    @Autowired
     private LoanRepository loanRepository;
 
-    @Autowired 
+    @Autowired
     private UserRepository userRepository;
 
-    // ✅ APPLY LOAN
+    // ============================
+    // ✅ TASK 1: USER FLOW
+    // ============================
+
     @Override
     public Loan applyLoan(Long userId, LoanRequest request) {
 
@@ -42,19 +45,18 @@ public class LoanServiceImpl implements LoanService {
         return loanRepository.save(loan);
     }
 
-    // ✅ GET USER LOANS
     @Override
     public List<Loan> getUserLoans(Long userId) {
         return loanRepository.findByUserId(userId);
     }
 
-    // 🔐 GET LOAN BY ID (SECURE)
     @Override
     public Loan getLoanById(Long id, Long userId) {
 
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Loan not found"));
 
+        // 🔐 SECURITY CHECK
         if (!loan.getUser().getId().equals(userId)) {
             throw new RuntimeException("Unauthorized access");
         }
@@ -66,20 +68,17 @@ public class LoanServiceImpl implements LoanService {
     // 🥈 TASK 2: LOAN OFFICER FLOW
     // ============================
 
-    // 🔥 GET PENDING LOANS
     @Override
     public List<Loan> getPendingLoans() {
         return loanRepository.findByStatus(LoanStatus.PENDING);
     }
 
-    // 🔥 APPROVE LOAN
     @Override
     public Loan approveLoan(Long loanId) {
 
         Loan loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Loan not found"));
 
-        // ⚠️ prevent re-processing
         if (!loan.getStatus().equals(LoanStatus.PENDING)) {
             throw new RuntimeException("Loan already processed");
         }
@@ -89,19 +88,42 @@ public class LoanServiceImpl implements LoanService {
         return loanRepository.save(loan);
     }
 
-    // 🔥 REJECT LOAN
     @Override
     public Loan rejectLoan(Long loanId) {
 
         Loan loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Loan not found"));
 
-        // ⚠️ prevent re-processing
         if (!loan.getStatus().equals(LoanStatus.PENDING)) {
             throw new RuntimeException("Loan already processed");
         }
 
         loan.setStatus(LoanStatus.REJECTED);
+
+        return loanRepository.save(loan);
+    }
+
+    // ============================
+    // 🥉 TASK 3: ADMIN FLOW
+    // ============================
+
+    @Override
+    public List<Loan> getAllLoans() {
+        return loanRepository.findAll();
+    }
+
+    @Override
+    public Loan updateLoanStatus(Long id, String status) {
+
+        Loan loan = loanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Loan not found"));
+
+        try {
+            LoanStatus newStatus = LoanStatus.valueOf(status.toUpperCase());
+            loan.setStatus(newStatus);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status value");
+        }
 
         return loanRepository.save(loan);
     }
