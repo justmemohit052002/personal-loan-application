@@ -328,6 +328,4 @@ Loan will be approved only if documents are VERIFIED
 
 ---
 
-## 📄 License
 
-MIT License © 2026
