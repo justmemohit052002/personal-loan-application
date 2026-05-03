@@ -1,16 +1,18 @@
 # 💰 Personal Loan Application System
 
-> A Spring Boot backend for managing personal loans, users, and application workflows — structured, scalable, and API-driven.
+> A secure, role-based Spring Boot backend for managing personal loans, document verification, and approval workflows — designed with real-world banking logic.
 
 ---
 
 ## 🚀 Features
 
-* 👤 User Management (Register, View)
-* 📄 Loan Application Processing
-* 🔁 CRUD Operations
+* 👤 User Management (Register, Login, Profile)
+* 💰 Loan Application & Tracking
+* 📄 Document Upload & Verification
 * 🔐 JWT Authentication & Role-Based Authorization
 * 🧑‍💼 Multi-role system (USER, LOAN_OFFICER, ADMIN)
+* 🛡️ Secure APIs with access control
+* 🔁 Loan Processing Workflow (PENDING → APPROVED/REJECTED)
 * 🌐 RESTful APIs
 * 🧩 Clean Layered Architecture
 
@@ -61,7 +63,11 @@ cd your-repo-name
 spring.datasource.url=jdbc:mysql://localhost:3306/loan_db
 spring.datasource.username=root
 spring.datasource.password=root
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
 ```
+
+---
 
 ### ▶️ Run Application
 
@@ -131,6 +137,7 @@ Authorization: Bearer <TOKEN>
 
 ```http
 POST /api/loans/apply
+Authorization: Bearer USER_TOKEN
 ```
 
 ```json
@@ -160,7 +167,50 @@ GET /api/loans/{id}
 
 ---
 
-## 🧑‍💼 3. LOAN OFFICER FLOW
+## 📄 3. DOCUMENT FLOW
+
+### 📤 Upload Document
+
+```http
+POST /api/documents/upload
+Authorization: Bearer USER_TOKEN
+```
+
+**Body → form-data**
+
+| Key          | Type | Value       |
+| ------------ | ---- | ----------- |
+| file         | File | Upload file |
+| documentType | Text | AADHAR      |
+
+---
+
+### 🔎 Get Pending Documents
+
+```http
+GET /api/documents/pending
+Authorization: Bearer LOAN_OFFICER_TOKEN
+```
+
+---
+
+### ✅ Approve Document
+
+```http
+PUT /api/documents/{id}/approve
+```
+
+---
+
+### ❌ Reject Document
+
+```http
+PUT /api/documents/{id}/reject?remark=Invalid
+```
+
+---
+
+## 🧑‍💼 4. LOAN OFFICER FLOW
 
 ### 🔎 Get Pending Loans
 
@@ -186,7 +236,7 @@ PUT /api/loans/{id}/reject
 
 ---
 
-## 👑 4. ADMIN FLOW
+## 👑 5. ADMIN FLOW
 
 ### 📊 Get All Loans
 
@@ -204,13 +254,13 @@ PUT /api/loans/{id}/status?status=APPROVED
 
 Valid values:
 
-* PENDING
-* APPROVED
-* REJECTED
+```
+PENDING, APPROVED, REJECTED
+```
 
 ---
 
-## 🔐 Authorization Header (Important)
+## 🔐 Authorization Header (IMPORTANT)
 
 All protected APIs require:
 
@@ -220,34 +270,61 @@ Authorization: Bearer <TOKEN>
 
 ---
 
-## 🧪 Recommended Testing Flow
+# 🧪 Recommended Testing Flow
 
-1. Register user
-2. Login → get token
+1. Register USER
+2. Login → get USER token
 3. Apply loan
-4. Login as Loan Officer → approve/reject
-5. Login as Admin → override
+4. Upload document
+5. Login as LOAN_OFFICER
+6. Approve / Reject document
+7. Approve / Reject loan
+8. Login as ADMIN → override status
 
 ---
 
-## ⚠️ Common Errors
+# ⚠️ Common Errors
 
-| Error                  | Reason                        |
-| ---------------------- | ----------------------------- |
-| 401 Unauthorized       | Missing/invalid token         |
-| 403 Forbidden          | Role not allowed              |
-| Unauthorized access    | Accessing another user's loan |
-| Loan already processed | Not in PENDING state          |
-| Invalid status         | Wrong enum value              |
+| Error                          | Reason                        |
+| ------------------------------ | ----------------------------- |
+| 401 Unauthorized               | Missing/invalid token         |
+| 403 Forbidden                  | Role not allowed              |
+| Unauthorized access            | Accessing another user's data |
+| Loan already processed         | Not in PENDING state          |
+| Document already processed     | Already approved/rejected     |
+| Missing request param (remark) | Reject without remark         |
 
 ---
 
-## 🎯 Project Highlights
+# 🎯 Project Highlights
 
-* Secure JWT-based authentication
-* Role-based + ownership-based access control
-* Real-world loan workflow (User → Officer → Admin)
-* Clean architecture (Controller → Service → Repository)
+* 🔐 JWT-based secure authentication
+* 🛡️ Role-based access control (USER, OFFICER, ADMIN)
+* 📄 Document verification system
+* 💰 Loan lifecycle management
+* 🧠 Ownership-based data access
+* 🧩 Clean architecture (Controller → Service → Repository)
+
+---
+
+# ⚠️ Current Limitation
+
+> Loan approval is **not yet dependent on document verification**.
+
+👉 Planned improvement:
+
+```
+Loan will be approved only if documents are VERIFIED
+```
+
+---
+
+# 🚀 Future Enhancements
+
+* 💸 EMI Calculation & Repayment System
+* 📊 Dashboard (User / Officer / Admin)
+* 📧 Notifications (Email/SMS)
+* 📁 Cloud file storage (AWS S3)
 
 ---
 
