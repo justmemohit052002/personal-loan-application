@@ -2,9 +2,11 @@ package com.loanapp.entity;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.loanapp.enums.DocumentStatus;
 import com.loanapp.enums.DocumentType;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -22,36 +24,38 @@ import lombok.Data;
 @Table(name = "documents")
 @Data
 public class Document {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private long id;
 
-	@Enumerated(EnumType.STRING)
-	private DocumentType documentType;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	private String fileUrl;
+    @Enumerated(EnumType.STRING)
+    private DocumentType documentType;
 
-	@Enumerated(EnumType.STRING)
-	private DocumentStatus status;
+    @Column(nullable = false)
+    private String fileUrl;
 
-	private String remarks;
+    @Enumerated(EnumType.STRING)
+    private DocumentStatus status;
 
-	@ManyToOne
-	@JoinColumn(name = "user_id")
-	private User user;
+    private String remarks;
 
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User user;
 
-	@PrePersist
-	public void onCreate() {
-		this.createdAt = LocalDateTime.now();
-		this.status = DocumentStatus.PENDING;
-	}
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
-	@PreUpdate
-	public void onUpdate() {
-		this.updatedAt = LocalDateTime.now();
-	}
+    @PrePersist
+    public void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.status = DocumentStatus.PENDING;
+    }
 
+    @PreUpdate
+    public void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }
