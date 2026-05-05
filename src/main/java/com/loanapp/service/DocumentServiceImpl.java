@@ -1,9 +1,6 @@
 package com.loanapp.service;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +16,10 @@ import com.loanapp.mapper.DocumentMapper;
 import com.loanapp.repository.DocumentRepository;
 import com.loanapp.repository.UserRepository;
 
-import java.io.IOException;
-
 @Service
 public class DocumentServiceImpl implements DocumentService {
-	@Autowired
+
+    @Autowired
     private DocumentRepository documentRepository;
 
     @Autowired
@@ -31,46 +27,61 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Autowired
     private DocumentMapper mapper;
-   
+
+    // ============================
+    // 📤 UPLOAD DOCUMENT
+    // ============================
     @Override
     public String uploadDocument(MultipartFile file, DocumentRequestDto dto) {
 
         try {
-            Path uploadPath = Paths.get(System.getProperty("user.dir"), "uploads");
+            // 🔥 VALIDATION
+            if (file.isEmpty()) {
+                throw new RuntimeException("File is empty");
+            }
+
+            if (!file.getContentType().equals("application/pdf") &&
+                !file.getContentType().startsWith("image/")) {
+                throw new RuntimeException("Only PDF or Image files allowed");
+            }
+
+            // 📁 CREATE FOLDER
+            Path uploadPath = Paths.get("uploads").toAbsolutePath();
 
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
-            String fileName = file.getOriginalFilename().replaceAll(" ", "_");
+            // 🔥 UNIQUE FILE NAME
+            String fileName = System.currentTimeMillis() + "_" +
+                    file.getOriginalFilename().replaceAll(" ", "_");
+
             Path filePath = uploadPath.resolve(fileName);
 
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            User user = userRepository.findById(dto.getUserId())
+            // 🔐 GET ACTIVE USER
+            User user = userRepository.findActiveUserById(dto.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
+            // 💾 SAVE DOCUMENT
             Document doc = new Document();
             doc.setDocumentType(dto.getDocumentType());
             doc.setFileUrl(filePath.toString());
             doc.setUser(user);
 
-            // 🔥 ADD HERE
-            System.out.println("Before save");
-
-            doc = documentRepository.save(doc);
-
-            System.out.println("After save");
-            System.out.println("Saved ID: " + doc.getId());
+            documentRepository.save(doc);
 
             return "Document uploaded successfully";
 
         } catch (Exception e) {
-            e.printStackTrace();
             throw new RuntimeException("File upload failed: " + e.getMessage());
         }
     }
 
+    // ============================
+    // 📄 GET PENDING DOCUMENTS
+    // ============================
     @Override
     public List<DocumentResponseDto> getPendingDocuments() {
         return documentRepository.findByStatus(DocumentStatus.PENDING)
@@ -79,21 +90,38 @@ public class DocumentServiceImpl implements DocumentService {
                 .toList();
     }
 
+    // ============================
+    // ✅ APPROVE DOCUMENT
+    // ============================
     @Override
     public String approveDocument(Long id) {
+
         Document doc = documentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Document not found"));
 
+        if (!doc.getStatus().equals(DocumentStatus.PENDING)) {
+            throw new RuntimeException("Document already processed");
+        }
+
         doc.setStatus(DocumentStatus.APPROVED);
+
         documentRepository.save(doc);
 
         return "Document approved";
     }
 
+    // ============================
+    // ❌ REJECT DOCUMENT
+    // ============================
     @Override
     public String rejectDocument(Long id, String remark) {
+
         Document doc = documentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Document not found"));
+
+        if (!doc.getStatus().equals(DocumentStatus.PENDING)) {
+            throw new RuntimeException("Document already processed");
+        }
 
         doc.setStatus(DocumentStatus.REJECTED);
         doc.setRemarks(remark);
@@ -102,5 +130,4 @@ public class DocumentServiceImpl implements DocumentService {
 
         return "Document rejected";
     }
-	
 }

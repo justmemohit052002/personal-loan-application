@@ -12,6 +12,8 @@ public class DocumentResponseDto {
     private String fileUrl;
     private DocumentStatus status;
     private String remarks;
+	
 
+    
 
 }
