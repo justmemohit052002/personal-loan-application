@@ -182,5 +182,22 @@ public class LoanController {
                         loan.getStatus()
                 )
         );
+        
+    }
+    
+    @PutMapping("/{loanId}/final-decision")
+    @PreAuthorize("hasRole('LOAN_OFFICER')")
+    public ResponseEntity<?> finalDecision(@PathVariable Long loanId) {
+
+        Loan loan = loanService.finalDecision(loanId);
+
+        return ResponseEntity.ok(
+                new LoanResponse(
+                        loan.getId(),
+                        loan.getAmount(),
+                        loan.getTenure(),
+                        loan.getStatus()
+                )
+        );
     }
 }

@@ -22,6 +22,12 @@ public class Loan {
     private Double monthlyIncome;
 
     private String purpose;
+    
+    private Integer creditScore;
+    
+    private Boolean eligible = false;
+    
+    private Boolean documentsVerified = false;
 
     @Enumerated(EnumType.STRING)
     private LoanStatus status;
@@ -109,5 +115,29 @@ public class Loan {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+    
+    public Integer getCreditScore() {
+        return creditScore;
+    }
+
+    public void setCreditScore(Integer creditScore) {
+        this.creditScore = creditScore;
+    }
+
+    public Boolean getEligible() {
+        return eligible;
+    }
+
+    public void setEligible(Boolean eligible) {
+        this.eligible = eligible;
+    }
+
+    public Boolean getDocumentsVerified() {
+        return documentsVerified;
+    }
+
+    public void setDocumentsVerified(Boolean documentsVerified) {
+        this.documentsVerified = documentsVerified;
     }
 }

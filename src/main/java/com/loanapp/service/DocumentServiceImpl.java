@@ -10,10 +10,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.loanapp.dto.DocumentRequestDto;
 import com.loanapp.dto.DocumentResponseDto;
 import com.loanapp.entity.Document;
+import com.loanapp.entity.Loan;
 import com.loanapp.entity.User;
 import com.loanapp.enums.DocumentStatus;
 import com.loanapp.mapper.DocumentMapper;
 import com.loanapp.repository.DocumentRepository;
+import com.loanapp.repository.LoanRepository;
 import com.loanapp.repository.UserRepository;
 
 @Service
@@ -27,6 +29,12 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Autowired
     private DocumentMapper mapper;
+    
+    @Autowired
+    private CreditScoreService creditScoreService;
+    
+    @Autowired
+    private LoanRepository loanRepository;
 
     // ============================
     // 📤 UPLOAD DOCUMENT
@@ -63,12 +71,16 @@ public class DocumentServiceImpl implements DocumentService {
             // 🔐 GET ACTIVE USER
             User user = userRepository.findActiveUserById(dto.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            Loan loan = loanRepository.findById(dto.getLoanId())
+                    .orElseThrow(() -> new RuntimeException("Loan not found"));
 
             // 💾 SAVE DOCUMENT
             Document doc = new Document();
             doc.setDocumentType(dto.getDocumentType());
             doc.setFileUrl(filePath.toString());
             doc.setUser(user);
+            doc.setLoan(loan);
 
             documentRepository.save(doc);
 
