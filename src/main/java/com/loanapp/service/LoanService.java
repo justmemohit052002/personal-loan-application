@@ -31,4 +31,7 @@ public interface LoanService {
     List<Loan> getAllLoans();
 
     Loan updateLoanStatus(Long id, String status);
+    // ============================
+    // 🥉 TASK 4 (LOAN OFFICER - AUTOMATED DECISION)/New feature/07/05
+    Loan finalDecision(Long loanId);
 }

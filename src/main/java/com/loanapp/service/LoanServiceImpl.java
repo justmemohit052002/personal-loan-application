@@ -21,11 +21,15 @@ public class LoanServiceImpl implements LoanService {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private CreditScoreService creditScoreService;
 
     // ============================
     // ✅ TASK 1: USER FLOW
     // ============================
 
+    
     @Override
     public Loan applyLoan(Long userId, LoanRequest request) {
 
@@ -123,6 +127,29 @@ public class LoanServiceImpl implements LoanService {
             loan.setStatus(newStatus);
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid status value");
+        }
+
+        return loanRepository.save(loan);
+    }
+    
+    // ============================
+    // 🥉 TASK 4: LOAN OFFICER - AUTOMATED DECISION
+    // ============================
+
+    @Override
+    public Loan finalDecision(Long loanId) {
+
+        Loan loan = loanRepository.findById(loanId)
+                .orElseThrow(() -> new RuntimeException("Loan not found"));
+
+        creditScoreService.calculateCreditScore(loanId);
+
+        loan = loanRepository.findById(loanId).get();
+
+        if (Boolean.TRUE.equals(loan.getEligible())) {
+            loan.setStatus(LoanStatus.APPROVED);
+        } else {
+            loan.setStatus(LoanStatus.REJECTED);
         }
 
         return loanRepository.save(loan);

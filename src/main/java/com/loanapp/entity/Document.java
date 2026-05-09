@@ -47,6 +47,10 @@ public class Document {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    @ManyToOne
+    @JoinColumn(name = "loan_id")
+    private Loan loan;
 
     @PrePersist
     public void onCreate() {
