@@ -1,7 +1,6 @@
 package com.loanapp.service;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,106 +15,242 @@ import com.loanapp.repository.LoanRepository;
 
 @Service
 public class CreditScoreServiceImpl implements CreditScoreService {
-	 @Autowired
-	    private LoanRepository loanRepository;
 
-	    @Autowired
-	    private DocumentRepository documentRepository;
+    @Autowired
+    private LoanRepository loanRepository;
 
-	    @Override
-	    public CreditScoreResponseDto calculateCreditScore(Long loanId) {
+    @Autowired
+    private DocumentRepository documentRepository;
 
-	        Loan loan = loanRepository.findById(loanId)
-	                .orElseThrow(() -> new RuntimeException("Loan not found"));
+    @Override
+    public CreditScoreResponseDto calculateCreditScore(Long loanId) {
 
-	        Long userId = loan.getUser().getId();
+        // =========================
+        // FETCH LOAN
+        // =========================
 
-	        List<Loan> previousLoans = loanRepository.findByUserId(userId);
-	        
-	        //Changed from list to optional and findbyLoanId to findById 
-	        Optional<Document> documents = documentRepository.findById(loanId);
-	        int score = 300;
+        Loan loan = loanRepository.findById(loanId)
+                .orElseThrow(() ->
+                        new RuntimeException("Loan not found"));
 
-	        // =========================
-	        // 1. CREDIT HISTORY CHECK
-	        // =========================
+        Long userId = loan.getUser().getId();
 
-	        if (previousLoans.isEmpty()) {
-	            score += 100;
-	        }
+        // =========================
+        // FETCH PREVIOUS LOANS
+        // =========================
 
-	        for (Loan l : previousLoans) {
+        List<Loan> previousLoans = loanRepository
+                .findByUserId(userId)
+                .stream()
+                .filter(l -> !l.getId().equals(loanId))
+                .toList();
 
-	            if (l.getStatus() == LoanStatus.APPROVED) {
-	                score += 150;
-	            }
+        // =========================
+        // FETCH DOCUMENTS
+        // =========================
 
-	            if (l.getStatus() == LoanStatus.REJECTED) {
-	                score -= 100;
-	            }
-	        }
-	        
-	     // =========================
-	        // 2. DOCUMENT VERIFICATION
-	        // =========================
+        List<Document> documents =
+                documentRepository.findByLoanId(loanId);
 
-	        boolean allDocsApproved = documents.stream()
-	                .allMatch(doc -> doc.getStatus() == DocumentStatus.APPROVED);
+        // =========================
+        // BASE SCORE
+        // =========================
 
-	        if (allDocsApproved && !documents.isEmpty()) {
-	            score += 250;
-	            loan.setDocumentsVerified(true);
-	        }
+        int score = 300;
 
-	        // =========================
-	        // 3. LOAN AMOUNT RISK
-	        // =========================
+        // =========================
+        // CREDIT HISTORY
+        // =========================
 
-	        if (loan.getAmount() > 500000) {
-	            score -= 100;
-	        }
+        if (previousLoans.isEmpty()) {
 
-	        // =========================
-	        // NORMALIZE SCORE
-	        // =========================
+            // No previous bad history
+            score += 100;
+        }
 
-	        if (score > 900) {
-	            score = 900;
-	        }
+        int approvedLoans = 0;
+        int rejectedLoans = 0;
+        int activeLoans = 0;
 
-	        if (score < 300) {
-	            score = 300;
-	        }
-	        
-	        // =========================
-	        // ELIGIBILITY CHECK
-	        // =========================
+        for (Loan l : previousLoans) {
 
-	        boolean eligible = score >= 700 && allDocsApproved;
+            // Previous approved loans
+            if (l.getStatus() == LoanStatus.APPROVED) {
 
-	        loan.setCreditScore(score);
-	        loan.setEligible(eligible);
+                approvedLoans++;
 
-	        loanRepository.save(loan);
+                score += 100;
+            }
 
-	        String risk;
+            // Previous rejected loans
+            if (l.getStatus() == LoanStatus.REJECTED) {
 
-	        if (score >= 750) {
-	            risk = "LOW";
-	        } else if (score >= 600) {
-	            risk = "MEDIUM";
-	        } else {
-	            risk = "HIGH";
-	        }
+                rejectedLoans++;
 
-	        return new CreditScoreResponseDto(
-	                score,
-	                eligible,
-	                risk,
-	                eligible
-	                        ? "Customer eligible for loan"
-	                        : "Customer not eligible for loan"
-	        );
-	    }
-    
+                score -= 100;
+            }
+
+            // Existing active loans
+            if (l.getStatus() == LoanStatus.PENDING) {
+
+                activeLoans++;
+
+                score -= 50;
+            }
+        }
+
+        // =========================
+        // DOCUMENT VERIFICATION
+        // =========================
+
+        boolean allDocsApproved =
+                !documents.isEmpty()
+                &&
+                documents.stream()
+                        .allMatch(doc ->
+                                doc.getStatus()
+                                        == DocumentStatus.APPROVED
+                        );
+
+        if (allDocsApproved) {
+
+            // All documents verified
+            score += 250;
+
+            loan.setDocumentsVerified(true);
+
+        } else {
+
+            loan.setDocumentsVerified(false);
+        }
+
+        // =========================
+        // MONTHLY INCOME ANALYSIS
+        // =========================
+
+        if (loan.getMonthlyIncome() >= 100000) {
+
+            // Excellent income
+            score += 200;
+
+        } else if (loan.getMonthlyIncome() >= 50000) {
+
+            // Good income
+            score += 100;
+
+        } else if (loan.getMonthlyIncome() >= 30000) {
+
+            // Average income
+            score += 50;
+
+        } else {
+
+            // Weak income
+            score -= 100;
+        }
+
+        // =========================
+        // LOAN AMOUNT RISK
+        // =========================
+
+        if (loan.getAmount() > 1000000) {
+
+            // Very high loan amount
+            score -= 150;
+
+        } else if (loan.getAmount() > 500000) {
+
+            // Moderately high loan amount
+            score -= 50;
+        }
+
+        // =========================
+        // AFFORDABILITY CHECK
+        // =========================
+
+        double yearlyIncome =
+                loan.getMonthlyIncome() * 12;
+
+        double loanRatio =
+                loan.getAmount() / yearlyIncome;
+
+        if (loanRatio <= 2) {
+
+            // Easily affordable
+            score += 100;
+
+        } else if (loanRatio <= 4) {
+
+            // Moderately affordable
+            score += 50;
+
+        } else {
+
+            // Risky loan burden
+            score -= 100;
+        }
+
+        // =========================
+        // NORMALIZE SCORE
+        // =========================
+
+        if (score > 900) {
+            score = 900;
+        }
+
+        if (score < 300) {
+            score = 300;
+        }
+
+        // =========================
+        // ELIGIBILITY
+        // =========================
+
+        boolean eligible =
+                score >= 650
+                &&
+                allDocsApproved;
+
+        // =========================
+        // SAVE LOAN DATA
+        // =========================
+
+        loan.setCreditScore(score);
+
+        loan.setEligible(eligible);
+
+        loanRepository.save(loan);
+
+        // =========================
+        // RISK LEVEL
+        // =========================
+
+        String risk;
+
+        if (score >= 750) {
+
+            risk = "LOW";
+
+        } else if (score >= 650) {
+
+            risk = "MEDIUM";
+
+        } else {
+
+            risk = "HIGH";
+        }
+
+        // =========================
+        // RESPONSE
+        // =========================
+
+        return new CreditScoreResponseDto(
+                score,
+                eligible,
+                risk,
+                eligible
+                        ? "Customer eligible for loan"
+                        : "Customer not eligible for loan"
+        );
+    }
 }
