@@ -10,38 +10,70 @@ import com.loanapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
 
-    @Autowired 
+    @Autowired
     private UserRepository userRepository;
 
-    @Autowired 
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // ✅ REGISTER
+    @Autowired
+    private EmailService emailService;
+
+    // ============================
+    // REGISTER USER
+    // ============================
+
     @Override
+    @Transactional
     public User registerUser(RegisterRequest request) {
 
-        String email = request.getEmail().toLowerCase().trim();
+        String email =
+                request.getEmail()
+                        .toLowerCase()
+                        .trim();
 
-        if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email already exists");
+        // 🔥 FIXED
+        if (userRepository
+                .existsByEmailAndIsDeletedFalse(email)) {
+
+            throw new RuntimeException(
+                    "Email already exists"
+            );
         }
 
-        if (userRepository.existsByMobileNumber(request.getMobileNumber())) {
-            throw new RuntimeException("Mobile number already exists");
+        // 🔥 FIXED
+        if (userRepository
+                .existsByMobileNumberAndIsDeletedFalse(
+                        request.getMobileNumber()
+                )) {
+
+            throw new RuntimeException(
+                    "Mobile number already exists"
+            );
         }
 
         User user = new User();
 
         user.setFullName(request.getFullName());
+
         user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setMobileNumber(request.getMobileNumber());
+
+        user.setPassword(
+                passwordEncoder.encode(
+                        request.getPassword()
+                )
+        );
+
+        user.setMobileNumber(
+                request.getMobileNumber()
+        );
 
         user.setCity(request.getCity());
         user.setState(request.getState());
@@ -49,56 +81,148 @@ public class UserServiceImpl implements UserService {
 
         user.setRole(Role.USER);
 
-        return userRepository.save(user);
+        User savedUser =
+                userRepository.save(user);
+
+        // 📧 SEND WELCOME EMAIL
+        emailService.sendRegistrationEmail(
+                savedUser.getEmail(),
+                savedUser.getFullName()
+        );
+
+        return savedUser;
     }
 
-    // 🔥 GET USER (SAFE)
+    // ============================
+    // GET USER BY ID
+    // ============================
+
     @Override
     public User getUserById(Long id) {
 
         return userRepository.findActiveUserById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(() ->
+                        new UserNotFoundException(
+                                "User not found"
+                        ));
     }
 
-    // 🔥 GET ALL USERS (SAFE)
+    // ============================
+    // GET ALL USERS
+    // ============================
+
     @Override
     public List<User> getAllUsers() {
+
         return userRepository.findByIsDeletedFalse();
     }
 
-    // 🔥 UPDATE USER (SAFE)
+    // ============================
+    // UPDATE USER
+    // ============================
+
     @Override
-    public User updateUser(Long id, UpdateUserRequest request) {
+    @Transactional
+    public User updateUser(Long id,
+                           UpdateUserRequest request) {
 
         User user = getUserById(id);
 
-        if (request.getFullName() != null && !request.getFullName().isBlank()) {
-            user.setFullName(request.getFullName());
+        // ============================
+        // UPDATE FULL NAME
+        // ============================
+
+        if (request.getFullName() != null &&
+                !request.getFullName().isBlank()) {
+
+            user.setFullName(
+                    request.getFullName().trim()
+            );
         }
 
-        if (request.getMobileNumber() != null && !request.getMobileNumber().isBlank()) {
+        // ============================
+        // UPDATE MOBILE NUMBER
+        // ============================
 
-            if (!request.getMobileNumber().equals(user.getMobileNumber()) &&
-                    userRepository.existsByMobileNumber(request.getMobileNumber())) {
+        if (request.getMobileNumber() != null &&
+                !request.getMobileNumber().isBlank()) {
 
-                throw new RuntimeException("Mobile number already exists");
+            String newMobile =
+                    request.getMobileNumber().trim();
+
+            if (!newMobile.equals(user.getMobileNumber())
+                    &&
+                    userRepository
+                            .existsByMobileNumberAndIsDeletedFalse(
+                                    newMobile
+                            )) {
+
+                throw new RuntimeException(
+                        "Mobile number already exists"
+                );
             }
 
-            user.setMobileNumber(request.getMobileNumber());
+            user.setMobileNumber(newMobile);
         }
 
-        if (request.getCity() != null) user.setCity(request.getCity());
-        if (request.getState() != null) user.setState(request.getState());
-        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        // ============================
+        // UPDATE CITY
+        // ============================
+
+        if (request.getCity() != null &&
+                !request.getCity().isBlank()) {
+
+            user.setCity(
+                    request.getCity().trim()
+            );
+        }
+
+        // ============================
+        // UPDATE STATE
+        // ============================
+
+        if (request.getState() != null &&
+                !request.getState().isBlank()) {
+
+            user.setState(
+                    request.getState().trim()
+            );
+        }
+
+        // ============================
+        // UPDATE ADDRESS
+        // ============================
+
+        if (request.getAddress() != null &&
+                !request.getAddress().isBlank()) {
+
+            user.setAddress(
+                    request.getAddress().trim()
+            );
+        }
 
         return userRepository.save(user);
     }
 
-    // 🔥 SOFT DELETE
+    // ============================
+    // SOFT DELETE USER
+    // ============================
+
     @Override
+    @Transactional
     public void deleteUser(Long id) {
 
         User user = getUserById(id);
+
+        // Already deleted check
+        if (Boolean.TRUE.equals(
+                user.getIsDeleted()
+        )) {
+
+            throw new RuntimeException(
+                    "User already deleted"
+            );
+        }
 
         user.setIsDeleted(true);
 

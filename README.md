@@ -1,331 +1,396 @@
 # 💰 Personal Loan Application System
 
-> A secure, role-based Spring Boot backend for managing personal loans, document verification, and approval workflows — designed with real-world banking logic.
+> A secure, role-based Spring Boot backend for managing personal loan applications, document verification, credit score evaluation, and approval workflows using real-world banking logic.
 
 ---
 
-## 🚀 Features
+# 🚀 Project Overview
 
-* 👤 User Management (Register, Login, Profile)
-* 💰 Loan Application & Tracking
-* 📄 Document Upload & Verification
-* 🔐 JWT Authentication & Role-Based Authorization
-* 🧑‍💼 Multi-role system (USER, LOAN_OFFICER, ADMIN)
-* 🛡️ Secure APIs with access control
-* 🔁 Loan Processing Workflow (PENDING → APPROVED/REJECTED)
-* 🌐 RESTful APIs
-* 🧩 Clean Layered Architecture
+The **Personal Loan Application System** is a backend application designed to simulate how modern banking and fintech loan systems operate.
 
----
+The system supports:
 
-## 🛠️ Tech Stack
+- User registration & authentication
+- Loan applications
+- Document uploads & verification
+- Credit score generation
+- Loan approval/rejection workflow
+- Role-based authorization
+- Email notification system
+- Secure REST APIs
 
-| Layer      | Technology            |
-| ---------- | --------------------- |
-| Backend    | Java, Spring Boot     |
-| Database   | MySQL                 |
-| ORM        | Hibernate / JPA       |
-| Security   | Spring Security + JWT |
-| Build Tool | Maven                 |
-| Tools      | Postman, Git          |
+This project follows a layered architecture using Spring Boot and demonstrates real-world backend engineering concepts used in banking platforms.
 
 ---
 
-## 📁 Project Structure
+# 🏦 Business Workflow
+
+```text
+USER
+ ↓
+Register & Login
+ ↓
+Apply for Loan
+ ↓
+Upload Required Documents
+ ↓
+LOAN OFFICER Reviews Documents
+ ↓
+Credit Score Generated
+ ↓
+Loan Approved / Rejected
+ ↓
+Email Notifications Sent
+```
+
+---
+
+# ✨ Features
+
+## 👤 Authentication & User Management
+
+- User Registration
+- Secure Login
+- JWT Authentication
+- Password Encryption using BCrypt
+- Role-Based Access Control (RBAC)
+
+---
+
+## 💰 Loan Management
+
+- Apply for Personal Loan
+- Track Loan Status
+- View Loan History
+- Loan Approval/Rejection Workflow
+- Manual & Automated Decision Flow
+
+---
+
+## 📄 Document Verification
+
+Users can upload:
+
+- AADHAR
+- PAN
+- SALARY_SLIP
+- BANK_STATEMENT
+
+Loan officers can:
+
+- Approve documents
+- Reject documents with remarks
+- Verify KYC workflow
+
+---
+
+## 🧠 Credit Score Engine
+
+The system calculates a dynamic credit score based on:
+
+- Previous loan history
+- Approved/rejected loans
+- Active loans
+- Monthly income
+- Loan affordability ratio
+- Document verification status
+- Loan amount risk
+
+### Risk Levels
+
+| Credit Score | Risk Level |
+|---|---|
+| 750+ | LOW |
+| 650 - 749 | MEDIUM |
+| Below 650 | HIGH |
+
+---
+
+## 📧 Email Notification System
+
+Asynchronous email notifications are sent for:
+
+- User Registration
+- Loan Submission
+- Loan Approval
+- Loan Rejection
+- Document Approval
+- Document Rejection
+
+Implemented using:
+
+- Spring Mail
+- Gmail SMTP
+- Async Processing (`@Async`)
+- Custom Thread Pool Executor
+
+---
+
+## 🔐 Security Features
+
+- JWT Token Authentication
+- Spring Security
+- Role-Based Authorization
+- Ownership Validation
+- Protected APIs
+- BCrypt Password Encoding
+
+---
+
+# 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Java, Spring Boot |
+| Database | MySQL |
+| ORM | Hibernate / JPA |
+| Security | Spring Security + JWT |
+| Build Tool | Maven |
+| API Testing | Postman |
+| Email Service | Spring Mail SMTP |
+| Authentication | JWT |
+| Version Control | Git & GitHub |
+
+---
+
+# 📁 Project Structure
 
 ```bash
 src/main/java/com/loanapp/
-├── config/
-├── controller/
-├── dto/
-├── entity/
-├── enums/
-├── repository/
-├── security/
-├── service/
-└── util/
+│
+├── config/          # Security & Async Config
+├── controller/      # REST Controllers
+├── dto/             # Request & Response DTOs
+├── entity/          # Database Entities
+├── enums/           # Enum Classes
+├── exception/       # Custom Exceptions
+├── mapper/          # DTO Mappers
+├── repository/      # JPA Repositories
+├── security/        # JWT & Security Logic
+├── service/         # Business Logic
+└── util/            # Utility Classes
 ```
 
 ---
 
-## ⚙️ Getting Started
+# ⚙️ Setup Instructions
 
-### 🔽 Clone Repository
+## 🔽 Clone Repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/your-username/personal-loan-application.git
+
+cd personal-loan-application
 ```
 
-### 🗄️ Configure Database
+---
+
+# 🗄️ Configure MySQL Database
+
+Create database:
+
+```sql
+CREATE DATABASE loan_db;
+```
+
+---
+
+# ⚙️ Configure `application.properties`
 
 ```properties
+server.port=8787
+
 spring.datasource.url=jdbc:mysql://localhost:3306/loan_db
 spring.datasource.username=root
 spring.datasource.password=root
+
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+
+jwt.secret=your_secret_key
+jwt.expiration=3600000
 ```
 
 ---
 
-### ▶️ Run Application
+# 📧 Email Configuration
+
+```properties
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+
+spring.mail.username=yourgmail@gmail.com
+spring.mail.password=your_app_password
+
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+```
+
+---
+
+# ▶️ Run Application
 
 ```bash
 mvn clean install
+
 mvn spring-boot:run
 ```
 
-Server runs on:
+Application runs on:
 
-```
+```bash
 http://localhost:8787
 ```
 
 ---
 
-# 🧪 API TESTING GUIDE (POSTMAN)
+# 🔐 Roles in System
+
+| Role | Responsibilities |
+|---|---|
+| USER | Apply loans, upload documents |
+| LOAN_OFFICER | Verify docs, check credit score, approve/reject loans |
+| ADMIN | View all loans, override statuses |
 
 ---
 
-## 🔐 1. AUTH APIs
+# 🧪 API Testing Flow
 
-### ✅ Register User
+## ✅ USER FLOW
 
-```http
-POST /api/auth/register
-```
-
-```json
-{
-  "fullName": "Test User",
-  "email": "user@test.com",
-  "password": "123456",
-  "mobileNumber": "9999999999",
-  "city": "Pune",
-  "state": "MH",
-  "address": "India"
-}
-```
+1. Register User
+2. Login
+3. Apply Loan
+4. Upload Documents
+5. View Loan Status
 
 ---
 
-### ✅ Login
+## ✅ LOAN OFFICER FLOW
 
-```http
-POST /api/auth/login
-```
-
-```json
-{
-  "email": "user@test.com",
-  "password": "123456"
-}
-```
-
-👉 Save token:
-
-```
-Authorization: Bearer <TOKEN>
-```
+1. Login as Officer
+2. View Pending Loans
+3. Verify Documents
+4. Generate Credit Score
+5. Approve / Reject Loan
 
 ---
 
-## 👤 2. USER FLOW
+## ✅ ADMIN FLOW
 
-### 💰 Apply Loan
-
-```http
-POST /api/loans/apply
-Authorization: Bearer USER_TOKEN
-```
-
-```json
-{
-  "amount": 50000,
-  "tenure": 12,
-  "monthlyIncome": 30000,
-  "purpose": "Personal use"
-}
-```
+1. View All Loans
+2. Override Loan Status
+3. Monitor System Workflow
 
 ---
 
-### 📄 Get My Loans
+# 📄 Major APIs
 
-```http
-GET /api/loans/my
-```
+## 🔐 Authentication APIs
 
----
-
-### 🔍 Get Loan by ID (OWN ONLY)
-
-```http
-GET /api/loans/{id}
-```
+| Method | Endpoint |
+|---|---|
+| POST | `/api/auth/register` |
+| POST | `/api/auth/login` |
 
 ---
 
-## 📄 3. DOCUMENT FLOW
+## 💰 Loan APIs
 
-### 📤 Upload Document
-
-```http
-POST /api/documents/upload
-Authorization: Bearer USER_TOKEN
-```
-
-**Body → form-data**
-
-| Key          | Type | Value       |
-| ------------ | ---- | ----------- |
-| file         | File | Upload file |
-| documentType | Text | AADHAR      |
+| Method | Endpoint |
+|---|---|
+| POST | `/api/loans/apply` |
+| GET | `/api/loans/my` |
+| GET | `/api/loans/{id}` |
+| GET | `/api/loans/pending` |
+| PUT | `/api/loans/{id}/approve` |
+| PUT | `/api/loans/{id}/reject` |
+| PUT | `/api/loans/{id}/final-decision` |
 
 ---
 
-### 🔎 Get Pending Documents
+## 📄 Document APIs
 
-```http
-GET /api/documents/pending
-Authorization: Bearer LOAN_OFFICER_TOKEN
+| Method | Endpoint |
+|---|---|
+| POST | `/api/documents/upload` |
+| GET | `/api/documents/pending` |
+| PUT | `/api/documents/{id}/approve` |
+| PUT | `/api/documents/{id}/reject` |
+
+---
+
+## 🧠 Credit Score APIs
+
+| Method | Endpoint |
+|---|---|
+| GET | `/api/credit-score/{loanId}` |
+
+---
+
+# 🔥 Credit Score Logic Example
+
+```text
+Base Score
++ Income Analysis
++ Verified Documents
++ Good Loan History
+- High Risk Loans
+- Rejected Loan History
+= Final Credit Score
 ```
 
 ---
 
-### ✅ Approve Document
+# 🧩 Architecture Highlights
 
-```http
-PUT /api/documents/{id}/approve
+- Layered Architecture
+- DTO Pattern
+- Repository Pattern
+- Async Email Processing
+- Exception Handling
+- Role-Based Workflow
+- Secure API Design
+- Banking-style Loan Lifecycle
+
+---
+
+# 📊 Current System Workflow
+
+```text
+REGISTER
+   ↓
+LOGIN
+   ↓
+APPLY LOAN
+   ↓
+UPLOAD DOCUMENTS
+   ↓
+VERIFY DOCUMENTS
+   ↓
+GENERATE CREDIT SCORE
+   ↓
+APPROVE / REJECT LOAN
+   ↓
+SEND EMAIL NOTIFICATIONS
 ```
 
 ---
 
-### ❌ Reject Document
+ 
 
-```http
-PUT /api/documents/{id}/reject?remark=Invalid
-```
+# 🎯 Learning Outcomes
 
----
+This project demonstrates:
 
-## 🧑‍💼 4. LOAN OFFICER FLOW
+- Spring Boot Backend Development
+- JWT Authentication
+- REST API Design
+- Spring Security
+- Async Programming
+- Database Design
+- Business Logic Engineering
+- Fintech Workflow Modeling
+- Credit Scoring Systems
+- Enterprise Backend Architecture
 
-### 🔎 Get Pending Loans
-
-```http
-GET /api/loans/pending
-```
-
----
-
-### ✅ Approve Loan
-
-```http
-PUT /api/loans/{id}/approve
-```
-
----
-
-### ❌ Reject Loan
-
-```http
-PUT /api/loans/{id}/reject
-```
-
----
-
-## 👑 5. ADMIN FLOW
-
-### 📊 Get All Loans
-
-```http
-GET /api/loans/all
-```
-
----
-
-### 🔄 Override Loan Status
-
-```http
-PUT /api/loans/{id}/status?status=APPROVED
-```
-
-Valid values:
-
-```
-PENDING, APPROVED, REJECTED
-```
-
----
-
-## 🔐 Authorization Header (IMPORTANT)
-
-All protected APIs require:
-
-```
-Authorization: Bearer <TOKEN>
-```
-
----
-
-# 🧪 Recommended Testing Flow
-
-1. Register USER
-2. Login → get USER token
-3. Apply loan
-4. Upload document
-5. Login as LOAN_OFFICER
-6. Approve / Reject document
-7. Approve / Reject loan
-8. Login as ADMIN → override status
-
----
-
-# ⚠️ Common Errors
-
-| Error                          | Reason                        |
-| ------------------------------ | ----------------------------- |
-| 401 Unauthorized               | Missing/invalid token         |
-| 403 Forbidden                  | Role not allowed              |
-| Unauthorized access            | Accessing another user's data |
-| Loan already processed         | Not in PENDING state          |
-| Document already processed     | Already approved/rejected     |
-| Missing request param (remark) | Reject without remark         |
-
----
-
-# 🎯 Project Highlights
-
-* 🔐 JWT-based secure authentication
-* 🛡️ Role-based access control (USER, OFFICER, ADMIN)
-* 📄 Document verification system
-* 💰 Loan lifecycle management
-* 🧠 Ownership-based data access
-* 🧩 Clean architecture (Controller → Service → Repository)
-
----
-
-# ⚠️ Current Limitation
-
-> Loan approval is **not yet dependent on document verification**.
-
-👉 Planned improvement:
-
-```
-Loan will be approved only if documents are VERIFIED
-```
-
----
-
-# 🚀 Future Enhancements
-
-* 💸 EMI Calculation & Repayment System
-* 📊 Dashboard (User / Officer / Admin)
-* 📧 Notifications (Email/SMS)
-* 📁 Cloud file storage (AWS S3)
-
----
-
-
+ 

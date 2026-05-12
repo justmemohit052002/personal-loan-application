@@ -1,15 +1,20 @@
+// LoanServiceImpl.java
+
 package com.loanapp.service;
 
 import com.loanapp.dto.LoanRequest;
 import com.loanapp.entity.Loan;
 import com.loanapp.entity.User;
 import com.loanapp.enums.LoanStatus;
+import com.loanapp.exception.LoanNotFoundException;
+import com.loanapp.exception.UnauthorizedAccessException;
 import com.loanapp.exception.UserNotFoundException;
 import com.loanapp.repository.LoanRepository;
 import com.loanapp.repository.UserRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,20 +26,25 @@ public class LoanServiceImpl implements LoanService {
 
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private CreditScoreService creditScoreService;
 
+    @Autowired
+    private EmailService emailService;
+
     // ============================
-    // ✅ TASK 1: USER FLOW
+    // APPLY LOAN
     // ============================
 
-    
     @Override
-    public Loan applyLoan(Long userId, LoanRequest request) {
+    @Transactional
+    public Loan applyLoan(Long userId,
+                          LoanRequest request) {
 
         User user = userRepository.findActiveUserById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(() ->
+                        new UserNotFoundException("User not found"));
 
         Loan loan = new Loan();
 
@@ -46,112 +56,237 @@ public class LoanServiceImpl implements LoanService {
         loan.setInterestRate(10.0);
         loan.setUser(user);
 
-        return loanRepository.save(loan);
+        Loan savedLoan = loanRepository.save(loan);
+
+        emailService.sendLoanSubmittedEmail(
+                user.getEmail(),
+                user.getFullName(),
+                savedLoan.getId()
+        );
+
+        return savedLoan;
     }
+
+    // ============================
+    // GET USER LOANS
+    // ============================
 
     @Override
     public List<Loan> getUserLoans(Long userId) {
+
         return loanRepository.findByUserId(userId);
     }
 
+    // ============================
+    // GET LOAN BY ID
+    // ============================
+
     @Override
-    public Loan getLoanById(Long id, Long userId) {
+    public Loan getLoanById(Long id,
+                            Long userId) {
 
         Loan loan = loanRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+                .orElseThrow(() ->
+                        new LoanNotFoundException(
+                                "Loan not found"
+                        ));
 
-        // 🔐 SECURITY CHECK
         if (!loan.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access");
+
+            throw new UnauthorizedAccessException(
+                    "Unauthorized access"
+            );
         }
 
         return loan;
     }
 
     // ============================
-    // 🥈 TASK 2: LOAN OFFICER FLOW
+    // GET PENDING LOANS
     // ============================
 
     @Override
     public List<Loan> getPendingLoans() {
-        return loanRepository.findByStatus(LoanStatus.PENDING);
+
+        return loanRepository.findByStatus(
+                LoanStatus.PENDING
+        );
     }
 
+    // ============================
+    // APPROVE LOAN
+    // ============================
+
     @Override
+    @Transactional
     public Loan approveLoan(Long loanId) {
 
         Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+                .orElseThrow(() ->
+                        new LoanNotFoundException(
+                                "Loan not found"
+                        ));
 
-        if (!loan.getStatus().equals(LoanStatus.PENDING)) {
-            throw new RuntimeException("Loan already processed");
+        if (!loan.getStatus().equals(
+                LoanStatus.PENDING
+        )) {
+
+            throw new RuntimeException(
+                    "Loan already processed"
+            );
         }
 
         loan.setStatus(LoanStatus.APPROVED);
 
-        return loanRepository.save(loan);
+        Loan approvedLoan =
+                loanRepository.save(loan);
+
+        emailService.sendLoanApprovedEmail(
+                loan.getUser().getEmail(),
+                loan.getUser().getFullName(),
+                loan.getId()
+        );
+
+        return approvedLoan;
     }
 
+    // ============================
+    // REJECT LOAN
+    // ============================
+
     @Override
+    @Transactional
     public Loan rejectLoan(Long loanId) {
 
         Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+                .orElseThrow(() ->
+                        new LoanNotFoundException(
+                                "Loan not found"
+                        ));
 
-        if (!loan.getStatus().equals(LoanStatus.PENDING)) {
-            throw new RuntimeException("Loan already processed");
+        if (!loan.getStatus().equals(
+                LoanStatus.PENDING
+        )) {
+
+            throw new RuntimeException(
+                    "Loan already processed"
+            );
         }
 
         loan.setStatus(LoanStatus.REJECTED);
 
-        return loanRepository.save(loan);
+        Loan rejectedLoan =
+                loanRepository.save(loan);
+
+        emailService.sendLoanRejectedEmail(
+                loan.getUser().getEmail(),
+                loan.getUser().getFullName(),
+                loan.getId()
+        );
+
+        return rejectedLoan;
     }
 
     // ============================
-    // 🥉 TASK 3: ADMIN FLOW
+    // GET ALL LOANS
     // ============================
 
     @Override
     public List<Loan> getAllLoans() {
+
         return loanRepository.findAll();
     }
 
+    // ============================
+    // UPDATE STATUS
+    // ============================
+
     @Override
-    public Loan updateLoanStatus(Long id, String status) {
+    @Transactional
+    public Loan updateLoanStatus(Long id,
+                                 String status) {
 
         Loan loan = loanRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+                .orElseThrow(() ->
+                        new LoanNotFoundException(
+                                "Loan not found"
+                        ));
 
         try {
-            LoanStatus newStatus = LoanStatus.valueOf(status.toUpperCase());
+
+            LoanStatus newStatus =
+                    LoanStatus.valueOf(
+                            status.toUpperCase()
+                    );
+
             loan.setStatus(newStatus);
+
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid status value");
+
+            throw new RuntimeException(
+                    "Invalid status value"
+            );
         }
 
         return loanRepository.save(loan);
     }
-    
+
     // ============================
-    // 🥉 TASK 4: LOAN OFFICER - AUTOMATED DECISION
+    // FINAL DECISION
     // ============================
 
     @Override
+    @Transactional
     public Loan finalDecision(Long loanId) {
 
         Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+                .orElseThrow(() ->
+                        new LoanNotFoundException(
+                                "Loan not found"
+                        ));
 
-        creditScoreService.calculateCreditScore(loanId);
+        creditScoreService.calculateCreditScore(
+                loanId
+        );
 
-        loan = loanRepository.findById(loanId).get();
+        loan = loanRepository.findById(loanId)
+                .orElseThrow(() ->
+                        new LoanNotFoundException(
+                                "Loan not found"
+                        ));
 
-        if (Boolean.TRUE.equals(loan.getEligible())) {
+        if (Boolean.TRUE.equals(
+                loan.getEligible()
+        )) {
+
             loan.setStatus(LoanStatus.APPROVED);
+
         } else {
+
             loan.setStatus(LoanStatus.REJECTED);
         }
 
-        return loanRepository.save(loan);
+        Loan finalLoan =
+                loanRepository.save(loan);
+
+        if (loan.getStatus() ==
+                LoanStatus.APPROVED) {
+
+            emailService.sendLoanApprovedEmail(
+                    loan.getUser().getEmail(),
+                    loan.getUser().getFullName(),
+                    loan.getId()
+            );
+
+        } else {
+
+            emailService.sendLoanRejectedEmail(
+                    loan.getUser().getEmail(),
+                    loan.getUser().getFullName(),
+                    loan.getId()
+            );
+        }
+
+        return finalLoan;
     }
 }
