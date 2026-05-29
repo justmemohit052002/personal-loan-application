@@ -2,6 +2,9 @@ package com.loanapp.service;
 
 import java.time.LocalDateTime;
 
+import com.loanapp.entity.EmiSchedule;
+import com.loanapp.enums.EmiStatus;
+import com.loanapp.repository.EmiScheduleRepository;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +41,9 @@ public class PaymentServiceImpl implements PaymentService {
 	@Autowired
 	private PaymentRepository paymentRepository;
 
+	@Autowired
+	private EmiScheduleRepository emiRepository;
+
 	@Override
 	public PaymentResponseDto createOrder(Long userId, CreatePaymentRequestDto dto) throws Exception {
 
@@ -71,16 +77,50 @@ public class PaymentServiceImpl implements PaymentService {
 	}
 
 	@Override
-	public String verifyPayment(PaymentVerificationDto dto) {
+	public String verifyPayment(
+			PaymentVerificationDto dto) {
 
-		Payment payment = paymentRepository.findById(dto.getPaymentId())
-				.orElseThrow(() -> new RuntimeException("Payment not found"));
+		Payment payment =
+				paymentRepository.findById(
+								dto.getPaymentId()
+						)
+						.orElseThrow(() ->
+								new RuntimeException(
+										"Payment not found"
+								));
 
-		payment.setRazorpayPaymentId(dto.getRazorpayPaymentId());
-		payment.setStatus(PaymentStatus.SUCCESS);
-		payment.setPaymentDate(LocalDateTime.now());
+		payment.setRazorpayPaymentId(
+				dto.getRazorpayPaymentId()
+		);
+
+		payment.setStatus(
+				PaymentStatus.SUCCESS
+		);
+
+		payment.setPaymentDate(
+				LocalDateTime.now()
+		);
 
 		paymentRepository.save(payment);
+
+		// ============================
+		// UPDATE EMI STATUS
+		// ============================
+
+		EmiSchedule emi =
+				emiRepository.findByLoanIdAndEmiNumber(
+						payment.getLoan().getId(),
+						payment.getEmiMonth()
+				);
+
+		if (emi != null) {
+
+			emi.setStatus(
+					EmiStatus.PAID
+			);
+
+			emiRepository.save(emi);
+		}
 
 		return "EMI payment successful";
 	}

@@ -33,6 +33,9 @@ public class LoanServiceImpl implements LoanService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private EmiScheduleService emiScheduleService;
+
     // ============================
     // APPLY LOAN
     // ============================
@@ -271,6 +274,10 @@ public class LoanServiceImpl implements LoanService {
 
         if (loan.getStatus() ==
                 LoanStatus.APPROVED) {
+
+            emiScheduleService.generateSchedule(
+                    finalLoan
+            );
 
             emailService.sendLoanApprovedEmail(
                     loan.getUser().getEmail(),
